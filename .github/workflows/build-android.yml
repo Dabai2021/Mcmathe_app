@@ -1,0 +1,54 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential ccache git libncurses5:i386 libstdc++6:i386 zlib1g:i386 openjdk-11-jdk unzip ant libffi-dev
+          
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install buildozer==1.5.0 python-for-android==2024.3.24
+          
+      - name: Cache Buildozer
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.buildozer
+            ~/.local/share/python-for-android
+          key: ${{ runner.os }}-buildozer-${{ hashFiles('buildozer.spec') }}
+          
+      - name: Build APK
+        run: |
+          buildozer android debug deploy run
+        env:
+          JAVA_HOME: /usr/lib/jvm/java-11-openjdk-amd64
+          
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: math-app-apk
+          path: bin/*.apk
+          retention-days: 30
